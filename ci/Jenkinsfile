@@ -1,0 +1,43 @@
+// Setup global variable
+def image
+
+pipeline {
+
+  environment {
+    image_name      = "prometheus-to-cloudwatch"
+    version         = "1.0.$BUILD_NUMBER"
+  }
+
+  agent any
+
+  stages {
+    stage('Build image') {
+
+      steps{
+        script {
+          ecr.withRegistry() {
+            image = docker.build(image_name + ":${version}")
+          }
+        }
+      }
+    }
+
+    stage('Push Image') {
+
+      when { branch 'master' }
+
+      steps {
+        script {
+          ecr.withRegistry() {
+            // Push the image
+            image.push()
+            image.push('1.0')
+
+            ecr.scan(image, "${version}")
+          }
+        }
+      }
+    }
+  }
+}
+
